@@ -1,0 +1,135 @@
+# ЗАДАНИЕ 1 (создание файла .my.cnf - см скриншот mycnf.jpg : файл создал в DBeaver,
+# потом с помощью WinSCP переместил файл в домашний каталог на удаленную ОС)
+
+max@max-VirtualBox:~$ mysql -V
+mysql  Ver 8.0.20 for Linux on x86_64 (MySQL Community Server - GPL)
+max@max-VirtualBox:~$ mysqld -V
+/usr/sbin/mysqld  Ver 8.0.20 for Linux on x86_64 (MySQL Community Server - GPL)
+max@max-VirtualBox:~$ pwd
+/home/max
+max@max-VirtualBox:~$ ls -la ~ | grep .my.cnf
+-rw-rw-r--  1 max  max     37 апр 28 23:13 .my.cnf.sql
+max@max-VirtualBox:~$ cat ~/ .my.cnf
+cat: /home/max/: Это каталог
+[mysql]
+user=root
+password=12345678max@max-VirtualBox:~$ mysql   (# здесь я пробую зайти в mysql без ввода пользователя и пароля, с помощью .my.cnf.)
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 15
+Server version: 8.0.20 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> exit
+Bye
+
+# (  ЗАДАНИЯ 2, 3, 4 )
+
+max@max-VirtualBox:~$ mysql
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 8
+Server version: 8.0.20 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+4 rows in set (0,40 sec)
+
+mysql> CREATE DATABASE example;
+Query OK, 1 row affected (0,25 sec)
+
+mysql> SHOW DATABASES;
++--------------------+
+| Database           |
++--------------------+
+| example            |
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+5 rows in set (0,01 sec)
+
+mysql> USE example;
+Database changed
+mysql> CREATE TABLE IF NOT EXISTS users (id INT, name CHAR);
+Query OK, 0 rows affected (0,19 sec)
+
+mysql> SHOW TABLES;
++-------------------+
+| Tables_in_example |
++-------------------+
+| users             |
++-------------------+
+1 row in set (0,01 sec)
+
+mysql> DESCRIBE users;
++-------+---------+------+-----+---------+-------+
+| Field | Type    | Null | Key | Default | Extra |
++-------+---------+------+-----+---------+-------+
+| id    | int     | YES  |     | NULL    |       |
+| name  | char(1) | YES  |     | NULL    |       |
++-------+---------+------+-----+---------+-------+
+2 rows in set (0,08 sec)
+
+#( т.к. в видеоуроке лектор подробно не объяснил как и откуда делать 
+# дамп, то сначала я делал как показано в видеоуроке, а в моем случае это неверно, т.к. у меня
+# не МакОС, а Убунту. Потом исправился, дамп сделал. Ниже - мой поиск верного решения)
+
+mysql> mysqldump example > sample.sql   
+    -> SHOW DATABASES;
+ERROR 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'mysqldump example > sample.sql
+SHOW DATABASES' at line 1
+
+mysql> exit
+Bye
+max@max-VirtualBox:~$ mysqldump example > sample.sql
+mysqldump: Got error: 1045: Access denied for user 'max'@'localhost' (using password: NO) when trying to connect
+max@max-VirtualBox:~$ mysqldump example > sample.sql
+mysqldump: Got error: 1045: Access denied for user 'max'@'localhost' (using password: NO) when trying to connect
+max@max-VirtualBox:~$ mysqldump -p 12345678 example > sample.sql
+Enter password: 
+mysqldump: Got error: 1045: Access denied for user 'max'@'localhost' (using password: YES) when trying to connect
+
+(# внизу - уже скорректированная команда, выполнение которой привело к созданию дампа)
+
+max@max-VirtualBox:~$ mysqldump -u root -p12345678 example > sample.sql
+mysqldump: [Warning] Using a password on the command line interface can be insecure.
+max@max-VirtualBox:~$ ls
+ examples.desktop                    Видео       Изображения    'Рабочий стол'
+ mysql-apt-config_0.8.10-1_all.deb   Документы   Музыка          Шаблоны
+ sample.sql                          Загрузки    Общедоступные
+
+# (ЗАДАНИЕ 4 - поискал информацию в интернете, нашел вариант с уточнением запроса при помощи
+--where, вроде бы получилось)
+
+max@max-VirtualBox:~$ mysqldump -u root -p12345678  --where="true limit 100" mysql help_keyword > my_database.sql
+mysqldump: [Warning] Using a password on the command line interface can be insecure.
+max@max-VirtualBox:~$ ls
+ examples.desktop                    sample.sql   Загрузки      Общедоступные
+ my_database.sql                     Видео        Изображения  'Рабочий стол'
+ mysql-apt-config_0.8.10-1_all.deb   Документы    Музыка        Шаблоны
+
+(# дальше при помощи WinSCP я созданные дамп файлы экспортировал из удаленной ОС
+на основную ОС, после чего отправил их на GitHub - см. dumps.jpg)
+
