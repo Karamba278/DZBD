@@ -1,0 +1,114 @@
+-- ДЗ 4, задача 3
+-- Cоздадим таблицу для размещения постов
+-- В ней будут столбцы: ID, текст поста, картинка/видео и др. медиа файл, сумма лайков этому посту от пользователей
+CREATE TABLE IF NOT EXISTS posts (
+	id INT(10) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+	body text COLLATE utf8_unicode_ci NOT NULL,
+	media_id INT UNSIGNED NOT NULL,
+	like_summ INT UNSIGNED NOT NULL);
+-- добавим колонку user_id с целью идентефикации поста с конкретным пользователем
+ALTER TABLE posts ADD COLUMN user_id INT(10) unsigned NOT NULL;
+
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (1, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (2, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (3, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (4, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (5, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (6, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (7, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (8, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (9, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+INSERT INTO posts (id, body, media_id, likes_summ, user_id ) VALUES (10, 'any text you want to put here', (FLOOR (1 + RAND() * 100)), 0, (FLOOR (1 + RAND() * 100)));
+
+
+-- Cоздадим таблицу учета лайков
+-- Столбцы: ID, post_id - для ассоциации лайка с конкретным постом, user_id - для ассоциации лайка с конкретным пользователем
+-- likes - возможны типа данных: Boolean, текст (Нравится, не нравится), числовое значение - 0 и 1
+-- Я решил взять числовое значение, т.к. потом для подсчета суммы лайков удобнее использовать SUM.
+-- Хотя можно было использовать и COUNT (особенно если бы использовали другие типы данных),
+-- но тогда надо дополнительно прописывать условия, а это усложняет программу.
+-- Единственный момент, который я не смог учесть: нужно сделать так, что бы один пользователь мог голосовать
+-- за конкретный пост только один раз
+CREATE TABLE IF NOT EXISTS like_count (
+	id INT(10) unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+	posts_id INT(10) unsigned NOT NULL, 
+	user_id INT UNSIGNED NOT NULL,
+	likes INT(10) UNSIGNED
+)ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (1, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (2, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (3, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (4, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (5, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (6, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (7, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (8, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (9, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (10, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (11, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (12, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (13, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (14, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (15, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (16, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (17, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (18, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (19, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (20, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (21, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (22, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (23, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (24, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (25, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (26, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (27, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (28, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (29, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (30, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (31, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (32, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (33, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (34, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (35, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (36, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (37, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (38, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (39, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (40, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (41, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (42, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (43, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (44, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (45, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (46, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (47, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (48, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (49, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (50, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (51, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (52, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (53, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (54, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (55, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (56, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (57, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (58, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+INSERT INTO like_count (id, posts_id, user_id, likes ) VALUES (59, (FLOOR (1 + RAND() * 10)), (FLOOR (1 + RAND() * 100)), (FLOOR (RAND())));
+
+-- заполним колонку likes - рандомно нулями и единицами. FLOOR тут не подходит, т.к. берется целая часть числа (всегда 0).
+-- Поэтому используем ROUND.
+UPDATE like_count SET likes = ROUND ( RAND());
+
+-- Посмотрим сумму лайков за каждый пост
+SELECT posts_id, SUM(likes) FROM like_count GROUP BY posts_id ;
+
+-- Создадим промежуточную таблицу, куда запишем сумму лайков за каждый пост
+CREATE TABLE like_sum (posts_id INT, like_sum INT);
+
+INSERT INTO like_sum (posts_id, like_sum) SELECT posts_id, SUM(likes) FROM like_count GROUP BY posts_id;
+
+SELECT * FROM like_temp;
+
+-- добавим в таблицу постов, в ряд likes_summ данные по лайкам из промежуточной таблицы.
+UPDATE posts SET likes_summ = (SELECT like_sum FROM like_sum WHERE posts_id = id) ;
