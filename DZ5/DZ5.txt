@@ -1,0 +1,142 @@
+CREATE DATABASE dz5;
+
+USE dz5;
+
+-- Пример 3.1
+DROP TABLE users31;
+
+CREATE TABLE users31 (
+  -- так мы делали на втором уроке:
+  -- created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  
+  -- updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  -- но по условию задачи поля  created_at и updated_at незаполненны, так и сделаем:
+  created_at DATETIME,
+  updated_at DATETIME
+);  
+
+INSERT INTO users31 (created_at, updated_at) VALUES (NULL, NULL);
+INSERT INTO users31 (created_at, updated_at) VALUES (NULL, NULL);
+INSERT INTO users31 (created_at, updated_at) VALUES (NULL, NULL);
+
+UPDATE users31 SET created_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP;
+
+SELECT * FROM users31;
+
+-- Пример 3.2 (перевод VARCHAR в формат DATETIME)
+
+DROP TABLE users32;
+
+CREATE TABLE users32 (
+  -- так мы делали на втором уроке:
+  -- created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  
+  -- updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  -- но по условию задачи поля  created_at и updated_at незаполненны, так и сделаем:
+  created_at VARCHAR (100),
+  updated_at VARCHAR (100)
+);  
+
+INSERT INTO users32 (created_at, updated_at) VALUES ("20.10.2017 8:10", "31.12.2018 8:10");
+INSERT INTO users32 (created_at, updated_at) VALUES ("25.05.2018 8:10", "20.10.2019 8:10");
+INSERT INTO users32 (created_at, updated_at) VALUES ("11.12.2019 8:10", "01.01.2020 8:10");
+
+SELECT * FROM users32;
+
+-- переведем строку в формат даты
+UPDATE users32 SET created_at = STR_TO_DATE(created_at, '%d.%m.%Y %k:%i' );
+
+-- проверим и посмотрим разницу (created_at мы уже перевели, а updated_at еще нет)
+SELECT * FROM users32;
+
+UPDATE users32 SET updated_at = STR_TO_DATE(updated_at, '%d.%m.%Y %k:%i' );
+
+ALTER TABLE users32 MODIFY COLUMN created_at DATETIME;
+
+-- проверим изменения 
+DESCRIBE users32;
+
+ALTER TABLE users32 MODIFY COLUMN updated_at DATETIME;
+
+SELECT * FROM users32;
+
+-- Задание 3.3
+DROP TABLE storehouses_products; 
+
+CREATE TABLE storehouses_products (
+value INT
+);
+
+INSERT INTO storehouses_products (value) VALUES (0);
+INSERT INTO storehouses_products (value) VALUES (2500);
+INSERT INTO storehouses_products (value) VALUES (0);
+INSERT INTO storehouses_products (value) VALUES (30);
+INSERT INTO storehouses_products (value) VALUES (500);
+INSERT INTO storehouses_products (value) VALUES (1);
+
+SELECT * FROM storehouses_products;
+
+SELECT * FROM storehouses_products 
+ORDER BY CASE WHEN value = 0 THEN 999999999 ELSE value END;
+
+-- Задание 3.4
+DROP TABLE users34;
+
+CREATE TABLE users34 (
+name VARCHAR (100),
+birthday DATE
+);  
+INSERT INTO users34 (name, birthday) VALUES ("Иван", "1980-10-10");
+INSERT INTO users34 (name, birthday) VALUES ("Мария", "1981-05-11");
+INSERT INTO users34 (name, birthday) VALUES ("Татьяна", "1982-08-12");
+INSERT INTO users34 (name, birthday) VALUES ("Антон", "1983-01-13");
+INSERT INTO users34 (name, birthday) VALUES ("Василий", "1984-05-14");
+INSERT INTO users34 (name, birthday) VALUES ("Василиса", "1985-10-15");
+
+SELECT * FROM users34;
+
+-- в условии задачи говорится о том, что нужно искать текстовые значения месяцев
+-- для этого воспользуемся DATE_FORMAT (по материалам видеоурока)
+
+SELECT name, birthday FROM users34 WHERE DATE_FORMAT(birthday, '%M')IN ('may', 'august'); 
+
+-- Задание 3.5
+
+DROP TABLE users35;
+
+CREATE TABLE users35 (
+  id INT PRIMARY KEY, 
+  name VARCHAR(100)
+  );
+  
+ INSERT INTO users35 (id, name) VALUES (1, "Один");
+ INSERT INTO users35 (id, name) VALUES (2, "Два");
+ INSERT INTO users35 (id, name) VALUES (5, "Пять");
+
+SELECT * FROM users35;
+
+SELECT * FROM users35 WHERE id IN (5, 1, 2) ORDER BY FIELD(id, 5, 1, 2);
+
+-- Задание 4.1
+SELECT AVG(TIMESTAMPDIFF(YEAR, birthday, CURDATE()))FROM users34;
+-- Задание 4.2
+SELECT CONCAT_WS('-', '2020', MONTH (birthday), DAY(birthday)) FROM users34;
+SELECT DAYNAME(CONCAT_WS('-', '2020', MONTH (birthday), DAY(birthday))),
+COUNT(*)FROM users34 
+GROUP BY DAYNAME(CONCAT_WS('-', '2020', MONTH (birthday), DAY(birthday)));
+-- Задание 4.3
+DROP TABLE users43;
+
+CREATE TABLE users43 (
+  id INT 
+    );
+  
+ INSERT INTO users43 (id) VALUES (1);
+ INSERT INTO users43 (id) VALUES (2);
+ INSERT INTO users43 (id) VALUES (3);
+ INSERT INTO users43 (id) VALUES (4);
+ INSERT INTO users43 (id) VALUES (5);
+ INSERT INTO users43 (id) VALUES (6);
+
+SELECT * FROM users43;
+-- на просторах интернета нашел способ умножения в mysql
+-- через свойство суммы натуральных логарифов. 
+SELECT exp(SUM(log(id))) product FROM users43;
