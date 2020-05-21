@@ -1,0 +1,139 @@
+-- Домашнее задание 7
+
+CREATE DATABASE dz7;
+
+USE dz7;
+
+-- Пример 7.1
+DROP TABLE users71;
+
+CREATE TABLE users71 (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  users VARCHAR(100),
+  orders INT
+);  
+
+INSERT INTO users71 (id, users, orders) VALUES (1, 'Покупатель1', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (2, 'Покупатель2', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (3, 'Покупатель3', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (4, 'Покупатель4', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (5, 'Покупатель5', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (6, 'Покупатель6', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (7, 'Покупатель7', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (8, 'Покупатель8', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (9, 'Покупатель9', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (10, 'Покупатель10', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (11, 'Покупатель11', FLOOR((RAND() * 5)));
+INSERT INTO users71 (id, users, orders) VALUES (12, 'Покупатель12', FLOOR((RAND() * 5)));
+
+
+SELECT * FROM users71;
+
+SELECT * FROM users71 WHERE orders <> 0;
+
+-- но т.к. в этом примере нет вложенного запроса, давайте его сделаем - cоздадим отдельную таблицу заказов
+DROP TABLE orders71;
+CREATE TABLE orders71 (
+  user71_id INT UNSIGNED,
+  orders71 INT
+); 
+
+INSERT INTO orders71 (user71_id, orders71) VALUES (1, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (2, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (3, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (4, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (5, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (6, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (7, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (8, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (9, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (10, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (11, FLOOR((RAND() * 5)));
+INSERT INTO orders71 (user71_id, orders71) VALUES (12, FLOOR((RAND() * 5)));
+
+SELECT * FROM orders71;
+
+SELECT * FROM users71 WHERE orders <> 0;
+
+SELECT
+user71_id,
+orders71,
+(SELECT users FROM users71 WHERE id = user71_id) AS Покупатель
+FROM orders71 WHERE orders71 <> 0;
+
+-- Задание 7.2
+DROP TABLE products72;
+
+CREATE TABLE products72 (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100),
+  catalog_id INT
+); 
+
+INSERT INTO products72 (id, name, catalog_id) VALUES (1, 'Интел', 1);
+INSERT INTO products72 (id, name, catalog_id) VALUES (2, 'АМД', 1);
+INSERT INTO products72 (id, name, catalog_id) VALUES (3, 'Эльбрус', 1);
+INSERT INTO products72 (id, name, catalog_id) VALUES (4, 'MSI', 2);
+INSERT INTO products72 (id, name, catalog_id) VALUES (5, 'ASUS', 2);
+INSERT INTO products72 (id, name, catalog_id) VALUES (6, 'Gigabyte', 2);
+
+
+DROP TABLE catalogs72;
+
+CREATE TABLE catalogs72 (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100)
+  ); 
+ 
+INSERT INTO catalogs72 (id, name) VALUES (1, 'Процессоры');
+INSERT INTO catalogs72 (id, name) VALUES (2, 'Материанские платы');
+INSERT INTO catalogs72 (id, name) VALUES (3, 'Жесткие диски');
+
+SELECT * FROM products72;
+
+SELECT * FROM catalogs72;
+
+SELECT 
+id,
+name,
+(SELECT name FROM catalogs72 WHERE id = catalog_id) AS Тип_товара,
+catalog_id
+FROM products72;
+
+-- Задание 7.3
+
+DROP TABLE flights;
+DROP TABLE cities;
+
+CREATE TABLE flights (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  flights_from VARCHAR(100),
+  flights_to VARCHAR(100)
+);  
+
+INSERT INTO flights (id, flights_from, flights_to) VALUES (1, 'moscow','omsk');
+INSERT INTO flights (id, flights_from, flights_to) VALUES (2, 'novgorod','kazan');
+INSERT INTO flights (id, flights_from, flights_to) VALUES (3, 'irkutsk','moscow');
+INSERT INTO flights (id, flights_from, flights_to) VALUES (4, 'omsk','irkutsk');
+INSERT INTO flights (id, flights_from, flights_to) VALUES (5, 'moscow','kazan');
+
+CREATE TABLE cities (
+  label VARCHAR(100),
+  name VARCHAR(100)
+);  
+
+INSERT INTO cities (label, name) VALUES ('moscow','Москва');
+INSERT INTO cities (label, name) VALUES ('irkutsk','Иркутск');
+INSERT INTO cities (label, name) VALUES ('novgorod','Новгород');
+INSERT INTO cities (label, name) VALUES ('kazan','Казань');
+INSERT INTO cities (label, name) VALUES ('omsk','Омск');
+
+SELECT * FROM flights;
+
+SELECT * FROM cities;
+
+SELECT 
+id,
+(SELECT name FROM cities WHERE label= flights_from) AS откуда,
+(SELECT name FROM cities WHERE label= flights_to) AS куда
+FROM flights;
