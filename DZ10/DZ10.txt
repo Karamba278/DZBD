@@ -1,0 +1,43 @@
+-- ДЗ к уроку 10
+
+-- Задача 1
+-- Предложить индексы
+-- 1.1 Индексы таблицы медица: по названию файла и по метаданным (по владельцу, в конкретном случае, 
+-- но и по другим типам, если они будут, так же можно будет тогда упростить поиск)
+CREATE INDEX media_filename_idx ON media(filename);
+
+CREATE INDEX media_metadata_idx ON media(metadata); -- а вот тут не получается, т.к. формат JSON
+
+-- 1.2 Индексы таблицы users (кроме почты, т.к. создали на вебинаре): по имени, по фамилии могут искать,
+-- по имени и фамилии, по фамилии и имени, по номеру телефона (теоретически)
+CREATE INDEX users_last_name__idx ON users(last_name);
+
+CREATE INDEX users_first_name__idx ON users(first_name);
+
+CREATE INDEX users_last_name__idx ON users(last_name, first_name); -- не создан, т.к. уже есть с этими столбцами индексы
+
+CREATE INDEX users_last_name__idx ON users(first_name, last_name); -- не создан, т.к. уже есть с этими столбцами индексы
+
+CREATE INDEX users_phone__idx ON users(phone);
+
+-- 1.3 Индексы таблицы profiles (кроме дня рождения,т.к. создали на вебинаре): - пол, город, страна
+CREATE INDEX profiles_gender__idx ON profiles(gender);
+
+CREATE INDEX profiles_city__idx ON profiles(city);
+
+CREATE INDEX profiles_country__idx ON profiles(country);
+
+-- Задание 2 
+ SELECT DISTINCT communities.name, -- имя группы
+  COUNT(communities_users.user_id ) OVER w AS users_in_group, -- общее количество пользователей в группе
+  (SELECT birthday  FROM profiles ORDER BY birthday DESC LIMIT 1) AS younger_user_birthday, -- самый молодой пользователь в группе
+  (SELECT birthday  FROM profiles ORDER BY birthday LIMIT 1) AS eldest_user_birthday, -- самый старший пользователь в группе
+  -- в этих двух запросах ошибка, конечно, тут среди всех пользователей ищу. 
+  COUNT(communities_users.user_id ) OVER () AS total_users_in_system, -- суммарное количество пользователей (не уникальных) в группах
+  COUNT(communities_users.user_id ) OVER () / (SELECT COUNT(*) FROM communities) AS average_users, -- среднее количество пользователей в группах
+  COUNT(communities_users.user_id ) OVER w / COUNT(communities_users.user_id ) OVER () * 100 AS "%%" -- отношение в процентах
+  -- (общее количество пользователей в группе / всего пользователей в системе) * 100
+    FROM (communities_users
+      JOIN communities 
+        ON communities_users.community_id = communities.id)
+        WINDOW w AS (PARTITION BY communities_users.community_id); -- Выносим окно отдельно 
