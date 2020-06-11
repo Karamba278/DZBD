@@ -1,0 +1,90 @@
+ -- ДЗ 11
+ 
+-- Воспользуемся базой данных из ДЗ7
+
+use dz7;
+ 
+ -- Задание 1
+ 
+DROP TABLE IF EXISTS logs;
+CREATE TABLE logs (
+	created_at DATETIME NOT NULL,
+	table_name VARCHAR(100) NOT NULL,
+	str_id INT NOT NULL,
+	name_value VARCHAR(255) NOT NULL
+) ENGINE = ARCHIVE;
+
+SELECT * FROM logs;
+
+DELIMITER //
+CREATE TRIGGER users_log AFTER INSERT ON users
+	FOR EACH ROW
+		BEGIN
+			INSERT INTO logs (created_at, table_name, str_id, name_value)
+				VALUES (NOW(), 'users', NEW.id, NEW.name);
+		END //
+
+CREATE TRIGGER catalogs_log AFTER INSERT ON catalogs
+	FOR EACH ROW
+		BEGIN
+			INSERT INTO logs (created_at, table_name, str_id, name_value)
+				VALUES (NOW(), 'catalogs', NEW.id, NEW.name);
+		END //
+
+CREATE TRIGGER products_log AFTER INSERT ON products
+	FOR EACH ROW
+		BEGIN
+			INSERT INTO logs (created_at, table_name, str_id, name_value)
+				VALUES (NOW(), 'products', NEW.id, NEW.name);
+		END //
+
+DELIMITER ;
+
+
+-- Проверим: 
+
+SELECT * FROM users;
+
+INSERT INTO users (name, birthday_at) VALUES ('UserDZ11', '2000-12-31');
+
+SELECT * FROM users;
+
+SELECT * FROM logs;
+
+SELECT * FROM catalogs;
+
+INSERT INTO catalogs (name) VALUES ('Мониторы');
+
+SELECT * FROM catalogs;
+
+SELECT * FROM logs;
+
+SELECT * FROM products;
+
+INSERT INTO products (name, desription, price, catalog_id) VALUES ('Самсунг', 'Монитор', 10000, 6);
+
+SELECT * FROM products;
+
+SELECT * FROM logs;
+
+
+-- Задание 2
+
+SELECT * FROM users;
+
+DROP PROCEDURE IF EXISTS mln_users;
+DELIMITER //
+CREATE PROCEDURE mln_users ()
+	BEGIN
+		DECLARE i INT DEFAULT 1000; -- тут можно ввести и миллион, но боюсь мой комп это не потянет :)
+		DECLARE j INT DEFAULT 7;
+		WHILE i > j DO
+			INSERT INTO users(name, birthday_at) VALUES (CONCAT('user_', j), NOW());
+			SET j = j + 1;
+		END WHILE;
+	END //
+DELIMITER ;
+
+CALL mln_users();
+
+SELECT * FROM users; -- чуть чуть с нумерацией только ошибся, надо было j задавать по DEFAULT 8
