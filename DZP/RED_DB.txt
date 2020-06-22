@@ -1,0 +1,656 @@
+-- создадим базу даных по недвижимости (Real Estate Database - RED)
+
+CREATE DATABASE red;
+
+USE red; -- создадим 16 таблиц
+
+-- 0 Таблица пользователей
+DROP TABLE IF EXISTS users;
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  birthday DATE,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  phone VARCHAR(100) NOT NULL UNIQUE,
+  agency BOOLEAN, -- агент/собственник (можно доработать, создав еще таблицу агенств)
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+); 
+
+UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE created_at > updated_at;
+
+-- 0.1 Таблица компоновщик с номером объявления
+DROP TABLE IF EXISTS advertisement;
+CREATE TABLE IF NOT EXISTS advertisement (
+  id INT UNSIGNED NOT NULL UNIQUE AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL, -- автор объявления, UNIQUE не ставим, т.к. от одного пользователя может быть несколько объявлений.
+  estate_type_id TINYINT, -- таблица по типам недвижимости (табл 1) 
+  sale_rent_id TINYINT, -- продажа аренда
+  activity_id TINYINT, -- черновик, в архиве, действующее объявление
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+   );
+  
+  SELECT * FROM advertisement;
+
+ UPDATE advertisement SET estate_type_id = ROUND (1 + RAND());
+ 
+ UPDATE advertisement SET updated_at = CURRENT_TIMESTAMP WHERE created_at > updated_at; 
+
+ALTER TABLE advertisement MODIFY COLUMN estate_type_id INT;
+
+-- А цену то забыл! :) Добавим.
+ALTER TABLE advertisement ADD price INT UNSIGNED AFTER user_id;
+
+UPDATE advertisement SET price = FLOOR (1000000 + RAND() * 10000000);
+  
+-- 1. Таблица типа недвижимости (1-квартира, 2-дом) Можно и участок, часть дома добавить, комнату, таунхаус и прочие виды недвижимости
+  DROP TABLE IF EXISTS estate_type;
+  CREATE TABLE IF NOT EXISTS estate_type (
+	id INT NOT NULL UNIQUE AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE
+);
+
+
+-- Наполним таблицу данными 
+INSERT INTO estate_type (id, name) VALUES (1, 'Квартира');
+INSERT INTO estate_type (id, name) VALUES (2, 'Дом');
+
+-- 2. Таблица по квартирам (характеристики) 
+DROP TABLE IF EXISTS flat_app;
+CREATE TABLE IF NOT EXISTS flat_app (
+	id INT UNSIGNED NOT NULL UNIQUE AUTO_INCREMENT PRIMARY KEY,
+	ad_id INT UNSIGNED UNIQUE, -- номер объявления , см табл 01
+	flat_app_type_id TINYINT, -- тип квартиры (квартира или апартаменты) из таблицы 2.1
+	name VARCHAR(150) NOT NULL, -- заголовок (в качестве привлекающего заголовка)
+	area FLOAT, -- площадь квартиры, м2
+	living_area FLOAT, -- жилая площадь, м2
+	kitchen_area FLOAT, -- площадь кухни, м2
+	building_type_id TINYINT, -- см табл 2.3
+	floor_number TINYINT, -- этаж
+	room_amount TINYINT, -- количество комнат
+	balcony BOOLEAN, -- балкон да/нет
+	repair_condition_id TINYINT -- Состояние ремонта, текстом. Но можно создать отдельную таблицу и предоставлять на выбор типы: 1. Требует ремонта, 2. Свежий ремонт 3. Евроремонт 4. Дизайнерский и т.д.
+);
+
+TRUNCATE TABLE flat_app; -- Здесь, а так же в house и land_plot_parameters пришлось очищать таблицу, с данными ошибка была, заново загружал
+
+ALTER TABLE flat_app MODIFY COLUMN building_type_id INT;
+-- Здесь попытался привести колонку ad_id в соответствие со столбцом id в advertisement, что бы при этом
+-- estate_type_id в advertsement был = 1 (квартира). Но что-то пошло не так.
+
+-- Сначала проверим количество строк с estate_type_id=1 в advertsement и количество строк в flat_app
+SELECT COUNT(*) AS квартир_в_объявлениях,
+(SELECT COUNT(*) FROM flat_app) AS Квартир_в_flat_app
+FROM advertisement 
+WHERE estate_type_id = 1;
+
+ALTER TABLE flat_app DROP COLUMN ad_id;
+
+ALTER TABLE flat_app ADD ad_id INT UNSIGNED UNIQUE AFTER id;
+
+-- Но при этом все равно идет ошибка Duplicate key. Причину не смог выявить. Каждый раз ключ, на котором возникает ошибка, разный.
+-- При этом если убрать UNIQUE то все работает, но идут дупликаты. Хотя я их не могу выявить
+UPDATE flat_app SET ad_id = (SELECT id FROM advertisement WHERE estate_type_id = 1 ORDER BY RAND() LIMIT 1); 
+
+SELECT id, ad_id,
+(SELECT user_id FROM advertisement WHERE id = flat_app.ad_id) AS user_id,
+(SELECT estate_type_id FROM advertisement WHERE id = flat_app.ad_id) AS estate_type_id
+FROM flat_app ORDER BY ad_id;
+
+SELECT * FROM flat_app;
+
+-- Идем дальше:
+-- Данные по площадам (общей, жилой, кухни) - созданы фейкером некорректно, да и FLOAT тут нам даст ошибку вдальнейшем.
+-- Поэтому поменяем на DECIMAL
+UPDATE flat_app SET area = ROUND (area, 2);
+ALTER TABLE flat_app MODIFY COLUMN area DECIMAL(5,2);
+
+UPDATE flat_app SET living_area = ROUND (living_area, 2);
+ALTER TABLE flat_app MODIFY COLUMN living_area DECIMAL(4,2);
+
+UPDATE flat_app SET kitchen_area = ROUND (kitchen_area, 2);
+ALTER TABLE flat_app MODIFY COLUMN kitchen_area DECIMAL(4,2);
+
+-- Во многих строках случился казус, когда общая площадь меньше жилой или суммы жилой и кухни. Исправим его.
+ UPDATE flat_app SET area = (kitchen_area + living_area + 10) WHERE area < (kitchen_area + living_area + 10); 
+
+
+-- 2.1 Таблица аппартаменты/квартира
+DROP TABLE IF EXISTS flat_app_type;
+CREATE TABLE IF NOT EXISTS flat_app_type (
+	id TINYINT NOT NULL PRIMARY KEY, 
+	name VARCHAR(150) NOT NULL UNIQUE -- 1. Квартира 2. Аппартаменты
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO flat_app_type (id, name) VALUES (1, 'Квартира'), (2, 'Аппартаменты');
+
+-- 2.2. Таблица площади комнат
+DROP TABLE IF EXISTS room_area;
+CREATE TABLE IF NOT EXISTS room_area (
+	flat_app_id INT UNSIGNED NOT NULL UNIQUE, -- см табл 2
+	room1 FLOAT, -- площадь 1-ой комнаты
+	room2 FLOAT,
+	room3 FLOAT,
+	room4 FLOAT,
+	room5 FLOAT
+);
+
+-- В этой таблице я аналогично ошибся с FLOAT, исправим это.
+
+SELECT * FROM room_area;
+
+UPDATE room_area SET room1 = ROUND (room1, 2),
+					 room2 = ROUND (room2, 2),
+					 room3 = ROUND (room3, 2),
+					 room4 = ROUND (room4, 2),
+					 room5 = ROUND (room5, 2);					 
+
+ALTER TABLE room_area MODIFY COLUMN room1 DECIMAL(4,2);
+ALTER TABLE room_area MODIFY COLUMN room2 DECIMAL(4,2);
+ALTER TABLE room_area MODIFY COLUMN room3 DECIMAL(4,2);
+ALTER TABLE room_area MODIFY COLUMN room4 DECIMAL(4,2);
+ALTER TABLE room_area MODIFY COLUMN room5 DECIMAL(4,2);
+
+-- 2.3 Таблица характеристик дома, где расположена квартира
+DROP TABLE IF EXISTS building_type;
+CREATE TABLE IF NOT EXISTS building_type (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	material VARCHAR (100), -- материал: 1. Панель, 2. Монолит, 3. Кирпич (можно добавить потом типы перегородок и прочие частности)
+	building_seria_id TINYINT, -- см табл 2.4
+	floors_number TINYINT, -- количество этажей
+	passenger_elevator BOOLEAN, -- наличие пассажирскго лифта
+	cargo_elevator BOOLEAN, -- наличие грузового лифта
+	year_of_construction TINYINT
+	-- доп параметры вроде количества подъездов, количества квартир на этаже и т.д. тоже можно указать
+);
+
+DELETE FROM building_type WHERE id > 88;
+
+SELECT * FROM building_type;
+
+ALTER TABLE building_type DROP COLUMN material;
+
+ALTER TABLE building_type ADD material_id INT AFTER id;
+
+UPDATE building_type SET material_id = FLOOR (1 + RAND()*3);
+
+ALTER TABLE building_type MODIFY COLUMN year_of_construction INT;
+
+UPDATE building_type SET year_of_construction = FLOOR (1920 + RAND() * 100);
+
+ALTER TABLE building_type MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT;
+
+-- 2.4 Таблица серии дома
+DROP TABLE IF EXISTS building_seria;
+CREATE TABLE IF NOT EXISTS building_seria (
+	id TINYINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE -- 1. Серийный 2. Индивидуальный проект  (можно расписать еще и какая серия) и т.д. можно много вариантов написать, поэтому  AUTO_INCREMENT 
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO building_seria (id, name) VALUES (1, 'Серийный'), (2, 'Индивидуальный проект');
+
+-- 2.5 Таблица серии дома
+DROP TABLE IF EXISTS material;
+CREATE TABLE IF NOT EXISTS material (
+	id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE -- Панель, кирпич, монолит и т.д. 
+);
+
+INSERT INTO material (id, name) VALUES (1, 'Кирпич'), (2, 'Монолит'), (3, 'Панель');
+
+-- 2.6 Таблица состояние ремонта
+DROP TABLE IF EXISTS repair_condition;
+CREATE TABLE IF NOT EXISTS repair_condition (
+	id TINYINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE -- Требует ремонта, не требует ремонта, дизайнерский ремонт и т.д.
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO repair_condition (id, name) VALUES (1, 'Требует ремонта'), (2, 'Евроремонт'), (3, 'Дизайнерский ремонт');
+	
+-- 3. Таблица по домам
+DROP TABLE IF EXISTS house;
+CREATE TABLE IF NOT EXISTS house (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255),
+  ad_id INT UNSIGNED,
+  land_plot_parameters_id INT,
+  electricity BOOLEAN, 
+  gas BOOLEAN,
+  sewerage BOOLEAN,  
+  water_supply BOOLEAN, 
+  area FLOAT, -- площадь, м2
+  living_area FLOAT, -- жилая площадь, м2
+  kitchen_area FLOAT, -- площадь кухни, м2
+  material VARCHAR (100),
+  floors_number TINYINT,
+  year_of_construction INT,
+  room_amount TINYINT, -- количество комнат
+  balcony BOOLEAN, -- балкон да/нет
+  repair_condition VARCHAR(150) -- Состояние ремонта, текстом (в случае дома это правильнее). Но можно создать отдельную таблицу (как для квартиры) и предоставлять на выбор типы: 1. Требует ремонта, 2. Свежий ремонт 3. Евроремонт 4. Дизайнерский и т.д.
+);
+
+TRUNCATE TABLE house ;
+
+SELECT * FROM house;
+-- сравним количество домов в объявлениях и количество строк в таблице домов
+SELECT COUNT(*) AS домов_в_объявлениях,
+(SELECT COUNT(*) FROM house) AS домов_в_house,
+(SELECT COUNT(*) FROM land_plot_parameters) AS участков
+FROM advertisement 
+WHERE estate_type_id = 2;
+
+-- Ошибки тут типовые, как и в квартирах, многоквартирных домах, комнатах. Исправим их.
+
+ALTER TABLE house MODIFY COLUMN ad_id INT UNSIGNED;
+ALTER TABLE house MODIFY COLUMN year_of_construction INT;
+
+UPDATE house SET year_of_construction = FLOOR (1920 + RAND() * 100);
+
+UPDATE house SET floors_number = FLOOR (1 + RAND() * 2);
+
+UPDATE house SET area = ROUND (area, 2);
+ALTER TABLE house MODIFY COLUMN area DECIMAL(5,2);
+
+UPDATE house SET living_area = ROUND (living_area, 2);
+ALTER TABLE house MODIFY COLUMN living_area DECIMAL(5,2);
+
+UPDATE house SET kitchen_area = ROUND (kitchen_area, 2);
+ALTER TABLE house MODIFY COLUMN kitchen_area DECIMAL(4,2);
+
+ UPDATE house SET area = (kitchen_area + living_area + 30) WHERE area < (kitchen_area + living_area + 30); 
+
+-- 4 Таблица параметров участка (можно в будущем использовать в случае выставления в продажу участка без дома)
+DROP TABLE IF EXISTS land_plot_parameters;
+CREATE TABLE IF NOT EXISTS land_plot_parameters (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255),
+  IJS_SNT BOOLEAN, -- СНТ или ИЖС (да, много других вариантов, но тогда можно слишком глубоко "зарыться")
+  land_area FLOAT,
+  well BOOLEAN,   -- можно много сюда добавить, вроде забора, насаждений, грядок, хозпостроек, но это все будет типовое
+  direction VARCHAR(255),
+  distance_from_MKAD INT -- условный параметр, в случае расположения объявления в других областях, можно и не указывать
+  );
+ 
+TRUNCATE TABLE land_plot_parameters; 
+ 
+ SELECT * FROM land_plot_parameters;
+
+UPDATE land_plot_parameters SET land_area = ROUND (land_area, 2);
+ALTER TABLE land_plot_parameters MODIFY COLUMN land_area DECIMAL(6,2);
+
+ALTER TABLE land_plot_parameters MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT;
+-- 5. Характеристики в части собственности: расположение на карте, кадастровый номер, количество собственников, 
+-- сколько лет в собственности, прописанные лица (эта таблица с общими характеристиками для домов и квартир,
+-- плюс ее сразу можно целиком сверять с данными росреестра, поэтому лучше эти характеристики вынести в эту общую таблицу)
+DROP TABLE IF EXISTS parameters;
+CREATE TABLE IF NOT EXISTS parameters (
+  ad_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  cadastral_number INT,
+  geolocation INT, -- сюда же можно дополнить уже и название населенного пункта, улицу и т.д., упростим просто до географических координат
+  owners_number INT,
+  last_owner_duration INT,
+  registered_persons_number INT
+);
+
+SELECT * FROM parameters;
+
+ALTER TABLE parameters MODIFY COLUMN geolocation VARCHAR(255);
+-- Доработаем геопозиционирование под нормальные координаты
+UPDATE parameters SET geolocation = CONCAT (
+	'{"langitude":"',
+	(RAND() * 100),
+	', "longitude":"',
+	(RAND() * 100),
+	'"}');
+
+
+
+
+-- Медиаданные
+-- 6. Таблица медиафайлов
+DROP TABLE IF EXISTS media;
+CREATE TABLE IF NOT EXISTS media (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  ad_id INT,
+  filename VARCHAR(255) NOT NULL,
+  size INT NOT NULL,
+  metadata JSON,
+  media_type_id INT UNSIGNED NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+ALTER TABLE media MODIFY COLUMN ad_id INT UNSIGNED;
+SELECT * FROM media;
+-- Поправим время
+UPDATE media SET updated_at = CURRENT_TIMESTAMP WHERE created_at > updated_at;
+-- Удалим лишние столбцы
+ALTER TABLE media DROP COLUMN user_id; -- лишний столбец, достаточно ad_id
+
+ALTER TABLE media DROP COLUMN metadata; -- тоже лишний столбец, достаточно ad_id
+
+-- Зададим правильное имя файла
+CREATE TEMPORARY TABLE extensions (name VARCHAR(10));
+
+INSERT INTO extensions VALUES ('jpeg'), ('avi'), ('mpeg'), ('mp4'), ('png');
+
+SELECT * FROM extensions;
+
+UPDATE media SET filename = CONCAT (
+	'https://dropbox.net/redDB/' ,
+	ad_id  ,
+	'.',
+	(SELECT name FROM extensions ORDER BY RAND() LIMIT 1));
+
+-- Отредактируем тип файла
+UPDATE media SET media_type_id = 1 WHERE filename LIKE '%jpeg';
+
+UPDATE media SET media_type_id = 2 WHERE filename NOT LIKE '%jpeg';
+
+-- 7 Таблица типов медиафайлов
+DROP TABLE IF EXISTS media_types;
+CREATE TABLE IF NOT EXISTS media_types (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO media_types (id, name) VALUES (1, 'photo'), (2, 'video');
+
+-- 8. Таблица назначения объявления: продажа, аренда (можно добавить срок аренды, раздел куплю и т.д.)
+DROP TABLE IF EXISTS sale_rent;
+CREATE TABLE IF NOT EXISTS sale_rent (
+	id TINYINT NOT NULL PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO sale_rent (id, name) VALUES (1, 'аренда');
+INSERT INTO sale_rent (id, name) VALUES (2, 'продажа');
+
+-- 9. Таблица истории и для стастики(для отображения нужных объектов): 1-черновик, 2-продается, 3-продано
+DROP TABLE IF EXISTS activity;
+CREATE TABLE IF NOT EXISTS activity (
+	id TINYINT NOT NULL PRIMARY KEY,
+	name VARCHAR(150) NOT NULL UNIQUE 
+);
+
+-- Наполним таблицу данными 
+
+INSERT INTO activity (id, name) VALUES (1, 'черновик');
+INSERT INTO activity (id, name) VALUES (2, 'продается');
+INSERT INTO activity (id, name) VALUES (3, 'продано');
+
+
+
+
+-- Работу с данными закончили, теперь добавим внешние ключи --
+
+-- Смотрим структуру таблицы
+DESC users;
+DESC advertisement;
+
+-- Добавляем внешние ключи
+ALTER TABLE advertisement 
+  ADD CONSTRAINT user_id_fk 
+    FOREIGN KEY (user_id) REFERENCES users(id)
+      ON DELETE CASCADE;
+ALTER TABLE advertisement 
+  ADD CONSTRAINT estate_type_id_fk
+    FOREIGN KEY (estate_type_id) REFERENCES estate_type(id)
+      ON DELETE SET NULL; -- Сделал по отдельности, т.к. ошибка несовместимости типов данных была, искал ее.
+      -- в итоге нашел: проблема заключалась в UNSIGNED :)
+
+ALTER TABLE advertisement   
+  ADD CONSTRAINT sale_rent_id_fk
+    FOREIGN KEY (sale_rent_id) REFERENCES sale_rent(id)
+      ON DELETE SET NULL,
+  ADD CONSTRAINT activity_id_fk
+    FOREIGN KEY (activity_id) REFERENCES activity(id)
+      ON DELETE SET NULL;
+ 
+DESC estate_type ;
+DESC flat_app;
+DESC flat_app_type;
+
+ALTER TABLE flat_app   
+  ADD CONSTRAINT ad_id_fk
+    FOREIGN KEY (ad_id) REFERENCES advertisement(id)
+      ON DELETE CASCADE,
+  ADD CONSTRAINT flat_app_type_id_fk
+    FOREIGN KEY (flat_app_type_id) REFERENCES flat_app_type(id)
+      ON DELETE SET NULL;
+ALTER TABLE flat_app     
+  ADD CONSTRAINT building_type_id_fk
+    FOREIGN KEY (building_type_id) REFERENCES building_type(id)
+      ON DELETE SET NULL,
+  ADD CONSTRAINT repair_condition_id_fk
+    FOREIGN KEY (repair_condition_id) REFERENCES repair_condition(id)
+      ON DELETE SET NULL;
+
+DESC building_type;
+DESC building_seria;   
+
+ALTER TABLE building_type     
+  ADD CONSTRAINT building_seria_id_fk
+    FOREIGN KEY (building_seria_id) REFERENCES building_seria(id)
+      ON DELETE SET NULL;
+ALTER TABLE building_type     
+  ADD CONSTRAINT material_id_fk
+    FOREIGN KEY (material_id) REFERENCES material(id)
+      ON DELETE SET NULL;
+     
+DESC house;
+DESC land_plot_parameters;
+
+ALTER TABLE house   
+  ADD CONSTRAINT ad_id_fkh
+    FOREIGN KEY (ad_id) REFERENCES advertisement(id)
+      ON DELETE CASCADE,
+  ADD CONSTRAINT land_plot_parameters_id_fk
+    FOREIGN KEY (land_plot_parameters_id) REFERENCES land_plot_parameters(id)
+      ON DELETE SET NULL;
+
+ALTER TABLE house DROP FOREIGN KEY land_plot_parameters_id_fk;
+          
+     
+DESC media;
+DESC media_types;
+
+ALTER TABLE media   
+  ADD CONSTRAINT ad_id_fkm
+    FOREIGN KEY (ad_id) REFERENCES advertisement(id)
+      ON DELETE CASCADE,
+  ADD CONSTRAINT media_type_id_fk
+    FOREIGN KEY (media_type_id) REFERENCES media_types(id)
+      ON DELETE CASCADE;
+     
+DESC parameters;
+
+ALTER TABLE parameters   
+  ADD CONSTRAINT ad_id_fkp
+    FOREIGN KEY (ad_id) REFERENCES advertisement(id)
+      ON DELETE CASCADE;
+     
+DESC room_area;
+DESC flat_app;
+ALTER TABLE room_area  
+  ADD CONSTRAINT flat_app_id_fkr
+    FOREIGN KEY (flat_app_id) REFERENCES flat_app(id)
+      ON DELETE CASCADE;
+ALTER TABLE room_area DROP FOREIGN KEY flat_app_id_fk;
+     
+-- Работу с внешними ключами закончили, ERDiagramm сформирована, теперь добавим индексы
+-- Пойдем по алфавитному порядку:
+-- 1. activity
+CREATE INDEX activity_name__idx ON activity (name); 
+-- 2. advertisement
+CREATE INDEX advertisement_price__idx ON advertisement (price); 
+-- 3. building_seria
+CREATE INDEX building_seria_name__idx ON building_seria(name); 
+-- 4. building_seria (основное тут - материал и год постройки)
+CREATE INDEX building_type_material__idx ON building_type(material);
+CREATE INDEX building_type_year__idx ON building_type(year_of_construction);
+-- 5. estate type
+CREATE INDEX estate_type_name__idx ON estate_type(name);
+-- 6. flat_app - основное тут: площадь, площадь кухни, этаж, балкон (можно и другие добавить, конечно)
+DESC flat_app;
+CREATE INDEX flat_app_area__idx ON flat_app (area); 
+CREATE INDEX flat_app_kitchen_area__idx ON flat_app (kitchen_area); 
+CREATE INDEX flat_app_floor_number__idx ON flat_app (floor_number);
+CREATE INDEX flat_app_balcony__idx ON flat_app (balcony);
+-- 7. flat_app_type
+CREATE INDEX flat_app_type_name__idx ON flat_app_type (name);
+-- 8. house - добавим тут индексы на материал и год постройки. 
+DESC house;
+CREATE INDEX house_material__idx ON house(material);
+CREATE INDEX house_year__idx ON house(year_of_construction);
+-- 9. land_plot_parameters
+DESC land_plot_parameters;
+CREATE INDEX land_plot_parameters_IJS_SNT__idx ON land_plot_parameters(IJS_SNT);
+CREATE INDEX land_plot_parameters_land_area__idx ON land_plot_parameters(land_area);
+CREATE INDEX land_plot_parameters_direction__idx ON land_plot_parameters(direction);
+CREATE INDEX land_plot_parameters_distance_from_MKAD__idx ON land_plot_parameters(distance_from_MKAD);
+-- 10. media -- Думаю, что в Базе Данных недвижимости индекс по фото/видео неактуален, поэтому индексы не будем вводить
+-- 11. media_types - аналогично п.10
+-- 12. parameters -- вот что, что, а в этой таблице индексы нужны кадастровому номеру и геопозиции.
+DESC parameters; 
+CREATE INDEX parameters_cadastral_number__idx ON parameters(cadastral_number);
+CREATE INDEX parameters_geolocation__idx ON parameters(geolocation);
+-- 13. repair_condition
+CREATE INDEX repair_condition_name__idx ON repair_condition (name);
+-- 14. room_area - Пожалуй тут индексы особо не нужны.
+-- 15. sale_rent
+CREATE INDEX sale_rent_name__idx ON sale_rent (name);
+-- 16. users - В случае БД по недвижимости тут актуален только индекс по агенту/собственнику
+CREATE INDEX users_agency__idx ON users (agency);
+-- Индексы созданы, теперь сформируем несколько запросов, процедур и триггеров
+-- 17. material
+CREATE INDEX material_name__idx ON material (name);
+
+
+
+-- Сначала проверим количество строк с estate_type_id=1 в advertsement и количество строк в flat_app (Выше я это уже проверял)
+SELECT COUNT(*) AS квартир_в_объявлениях,
+(SELECT COUNT(*) FROM flat_app) AS Квартир_в_flat_app
+FROM advertisement 
+WHERE estate_type_id = 1;
+
+-- Тоже самое с домами
+SELECT COUNT(*) AS домов_в_объявлениях,
+(SELECT COUNT(*) FROM house) AS домов_в_house,
+(SELECT COUNT(*) FROM land_plot_parameters) AS участков
+FROM advertisement 
+WHERE estate_type_id = 2;
+
+-- Посмотрим общее количество объявлений и сумму объявлений о продаже как домов, так и квартир (суммы должны совпадать)
+SELECT COUNT(*) AS всего_объявлений,
+(SELECT COUNT(*) FROM house) AS домов_в_house,
+(SELECT COUNT(*) FROM flat_app) AS Квартир_в_flat_app,
+(SELECT (домов_в_house + Квартир_в_flat_app)) AS всего_в_домах_и_квартирах
+FROM advertisement;
+
+-- посмотрим чего продается больше, домов или квартир
+SELECT IF(
+	(SELECT COUNT(*) FROM advertisement WHERE estate_type_id IN (
+		SELECT estate_type_id FROM estate_type WHERE id=1)
+	) 
+	> 
+	(SELECT COUNT(*) FROM advertisement WHERE estate_type_id IN (
+		SELECT estate_type_id FROM estate_type WHERE id=2)
+	), 
+   'Квартир продается больше чем домов', 'Домов продается больше чем квартир') 
+  	AS Flats_vs_houses;
+
+
+-- Посмотрим цены на квартиры/аппартаменты:
+SELECT id,
+(SELECT price FROM advertisement WHERE id = flat_app.ad_id) AS price,
+(SELECT name FROM flat_app_type WHERE flat_app_type.id = flat_app.flat_app_type_id) as type
+FROM flat_app;
+
+-- Теперь сложим таблицы с помощью JOIN
+SELECT *
+ FROM flat_app
+ 	LEFT JOIN flat_app_type
+ 		ON flat_app_type.id = flat_app.flat_app_type_id
+ 	JOIN building_type 
+ 		ON building_type.id = flat_app.id
+GROUP BY flat_app.id
+ORDER BY flat_app.flat_app_type_id;
+
+-- А теперь очередь за представлениями
+
+SELECT * FROM house;
+CREATE OR REPLACE VIEW view_house (h_id, h_name, l_d) AS
+	SELECT house.id, 
+		   house.name, 
+		   land_plot_parameters.distance_from_MKAD 
+		FROM house
+		LEFT JOIN land_plot_parameters
+			ON land_plot_parameters.id = house.land_plot_parameters_id;
+
+SELECT * FROM view_house;
+
+
+CREATE OR REPLACE VIEW view_ad (ad_id, cad_n, geo_l) AS
+	SELECT advertisement.id, 
+		   parameters.cadastral_number, 
+		   parameters.geolocation 
+		FROM advertisement 
+		LEFT JOIN parameters 
+			ON parameters.ad_id = advertisement.id;
+
+SELECT * FROM view_ad;
+
+
+-- А теперь триггеры
+
+DROP TABLE IF EXISTS logs;
+CREATE TABLE logs (
+	created_at DATETIME NOT NULL,
+	table_name VARCHAR(100) NOT NULL,
+	str_id INT NOT NULL,
+	name_value VARCHAR(255) NOT NULL
+) ENGINE = ARCHIVE;
+
+SELECT * FROM logs;
+
+DELIMITER //
+CREATE TRIGGER sale_rent_log AFTER INSERT ON sale_rent
+	FOR EACH ROW
+		BEGIN
+			INSERT INTO logs (created_at, table_name, str_id, name_value)
+				VALUES (NOW(), 'sale_rent', NEW.id, NEW.name);
+		END //
+		
+INSERT INTO sale_rent (id, name) VALUES (3, 'Посуточная аренда');
+
+SELECT * FROM sale_rent; 
+
+SELECT * FROM logs;
+
+-- И процедуры
+DELIMITER //
+CREATE PROCEDURE price_v2 ()
+	BEGIN
+		SELECT MAX(price)FROM advertisement;
+		SELECT MIN(price)FROM advertisement;
+		SELECT AVG(price)FROM advertisement;
+		SELECT AVG(price) AS Средняя_цена_квартир FROM advertisement WHERE estate_type_id = 1;
+	    SELECT AVG(price) AS Средняя_цена_домов FROM advertisement WHERE estate_type_id = 2;
+	END //
+DELIMITER ;
+
+CALL price_v2(); 
